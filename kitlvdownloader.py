@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #-*- coding: utf-8 -*-
 
-import sys, argparse, requests, os, xmltodict
+import sys, argparse, requests, os, xmltodict, shutil
 from pyquery import PyQuery
 
 BASE_DATA_URL = "http://media-kitlv.nl/index.php?option=com_memorixbeeld&view=record&format=topviewxml&tstart=0&id="
@@ -47,6 +47,17 @@ def parse_image_data(xml):
 
 	return image_data
 
+def download_image_pieces(image_data):
+	global WORK_DIR
+	numfiles = int(image_data["numfiles"])+1
+	for i in range (1, numfiles):
+		url = image_data["tileurl"] + image_data["filepath"] + "&" + str(i)
+		print("Downloaded {0} of {1}:".format(i, numfiles), url)
+		r = requests.get(url, stream=True)
+		with open(os.path.join(WORK_DIR, str(i)+".jpg"), 'wb') as f:
+			r.raw.decode_content = True
+			shutil.copyfileobj(r.raw, f)
+
 def main(argv):
 	global WORK_DIR
 
@@ -62,6 +73,7 @@ def main(argv):
 		os.makedirs(WORK_DIR)
 	xml = get_image_datafile(datafile_id)
 	image_data = parse_image_data(xml)
+	download_image_pieces(image_data)
 
 if __name__ == '__main__':
 	main(sys.argv[1:])
