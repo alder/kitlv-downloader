@@ -1,7 +1,14 @@
 #!/usr/bin/env python
 #-*- coding: utf-8 -*-
 
-import sys, argparse
+import sys, argparse, requests
+from pyquery import PyQuery
+
+def get_image_datafile_id(page_url):
+	r = requests.get(page_url)
+	pq = PyQuery(r.content)
+	datafile_id = pq("div.detailresult").attr("id")
+	return datafile_id[3:]
 
 def main(argv):
 	parser = argparse.ArgumentParser()
@@ -10,6 +17,7 @@ def main(argv):
 
 	page_url = results.url
 
+	datafile_id = get_image_datafile_id(page_url)
 
 if __name__ == '__main__':
 	main(sys.argv[1:])
