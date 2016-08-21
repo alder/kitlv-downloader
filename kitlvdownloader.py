@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #-*- coding: utf-8 -*-
 
-import sys, argparse, requests, os
+import sys, argparse, requests, os, xmltodict
 from pyquery import PyQuery
 
 BASE_DATA_URL = "http://media-kitlv.nl/index.php?option=com_memorixbeeld&view=record&format=topviewxml&tstart=0&id="
@@ -29,6 +29,24 @@ def get_image_datafile(datafile_id):
 	xml = r.content
 	return xml
 
+def parse_image_data(xml):
+	parsed_data = xmltodict.parse(xml)
+	image_data = dict()
+	image_data["tileurl"] = parsed_data["viewer"]["config"]["tileurl"]
+	image_data["filepath"] = parsed_data["viewer"]["topviews"]["topview"]["tjpinfo"]["filepath"]
+	image_data["numfiles"] = parsed_data["viewer"]["topviews"]["topview"]["tjpinfo"]["numfiles"]
+	image_data["layers"] = len(parsed_data["viewer"]["topviews"]["topview"]["tjpinfo"]["layers"]["layer"])
+	for i in range(1, image_data["layers"] + 1):
+		layer = "layer_" + str(i)
+		image_data[layer] = dict()
+		image_data[layer]["start"] = parsed_data["viewer"]["topviews"]["topview"]["tjpinfo"]["layers"]["layer"][i-1]["@starttile"]
+		image_data[layer]["cols"] = parsed_data["viewer"]["topviews"]["topview"]["tjpinfo"]["layers"]["layer"][i-1]["@cols"]
+		image_data[layer]["rows"] = parsed_data["viewer"]["topviews"]["topview"]["tjpinfo"]["layers"]["layer"][i-1]["@rows"]
+		image_data[layer]["width"] = parsed_data["viewer"]["topviews"]["topview"]["tjpinfo"]["layers"]["layer"][i-1]["@width"]
+		image_data[layer]["height"] = parsed_data["viewer"]["topviews"]["topview"]["tjpinfo"]["layers"]["layer"][i-1]["@height"]
+
+	return image_data
+
 def main(argv):
 	global WORK_DIR
 
@@ -43,6 +61,7 @@ def main(argv):
 	if not os.path.exists(WORK_DIR):
 		os.makedirs(WORK_DIR)
 	xml = get_image_datafile(datafile_id)
+	image_data = parse_image_data(xml)
 
 if __name__ == '__main__':
 	main(sys.argv[1:])
