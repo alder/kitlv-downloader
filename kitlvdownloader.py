@@ -12,7 +12,7 @@ def get_image_datafile_id(page_url):
 	r = requests.get(page_url)
 	pq = PyQuery(r.content)
 	datafile_id = pq("div.detailresult").attr("id")
-	return datafile_id[3:]
+	return datafile_id[3:] #remove substring "id_" from "id_xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
 
 def get_filtered_image_title(page_url):
 	r = requests.get(page_url)
