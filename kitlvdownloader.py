@@ -39,12 +39,11 @@ def parse_image_data(xml):
 
 def download_image_pieces(image_data):
 	global WORK_DIR
-	numfiles = int(image_data["numfiles"])+1
-	for i in range (1, numfiles):
-		url = image_data["tileurl"] + image_data["filepath"] + "&" + str(i)
-		print("Downloaded {0} of {1}:".format(i, numfiles), url)
+	for i in range (int(image_data["numfiles"])):
+		url = image_data["tileurl"] + image_data["filepath"] + "&" + str(i+1)
+		print("Downloaded {0} of {1}:".format(i+1, int(image_data["numfiles"])), url)
 		r = requests.get(url, stream=True)
-		with open(os.path.join(WORK_DIR, str(i)+".jpg"), 'wb') as f:
+		with open(os.path.join(WORK_DIR, str(i+1)+".jpg"), 'wb') as f:
 			r.raw.decode_content = True
 			shutil.copyfileobj(r.raw, f)
 
@@ -60,8 +59,8 @@ def combine_images(image_data):
 		cur_width = 0
 		cur_height = 0
 		img_num = int(layer['@starttile'])
-		for i in range(1, int(layer['@rows'])+1):
-			for j in range(1, int(layer['@cols'])+1):
+		for i in range(int(layer['@rows'])):
+			for j in range(int(layer['@cols'])):
 				paste_image = Image.open(os.path.join(WORK_DIR, str(img_num)+".jpg"))
 				new_image.paste(paste_image, (start_x, start_y))
 				img_num+=1
