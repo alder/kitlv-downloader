@@ -32,19 +32,8 @@ def get_image_datafile(datafile_id):
 
 def parse_image_data(xml):
 	parsed_data = xmltodict.parse(xml)
-	image_data = dict()
-	image_data["tileurl"] = parsed_data["viewer"]["config"]["tileurl"]
-	image_data["filepath"] = parsed_data["viewer"]["topviews"]["topview"]["tjpinfo"]["filepath"]
-	image_data["numfiles"] = parsed_data["viewer"]["topviews"]["topview"]["tjpinfo"]["numfiles"]
-	image_data["layers"] = len(parsed_data["viewer"]["topviews"]["topview"]["tjpinfo"]["layers"]["layer"])
-	for i in range(1, image_data["layers"] + 1):
-		layer = "layer_" + str(i)
-		image_data[layer] = dict()
-		image_data[layer]["start"] = int(parsed_data["viewer"]["topviews"]["topview"]["tjpinfo"]["layers"]["layer"][i-1]["@starttile"])
-		image_data[layer]["cols"] = int(parsed_data["viewer"]["topviews"]["topview"]["tjpinfo"]["layers"]["layer"][i-1]["@cols"])
-		image_data[layer]["rows"] = int(parsed_data["viewer"]["topviews"]["topview"]["tjpinfo"]["layers"]["layer"][i-1]["@rows"])
-		image_data[layer]["width"] = int(parsed_data["viewer"]["topviews"]["topview"]["tjpinfo"]["layers"]["layer"][i-1]["@width"])
-		image_data[layer]["height"] = int(parsed_data["viewer"]["topviews"]["topview"]["tjpinfo"]["layers"]["layer"][i-1]["@height"])
+	image_data = {"tileurl": parsed_data["viewer"]["config"]["tileurl"]}
+	image_data.update(parsed_data["viewer"]["topviews"]["topview"]["tjpinfo"])
 
 	return image_data
 
@@ -62,18 +51,17 @@ def download_image_pieces(image_data):
 def combine_images(image_data):
 	global WORK_DIR
 
-	layers = image_data['layers']+1
-	for layer in range(1, layers):
-		width = image_data['layer_'+str(layer)]['width']
-		height = image_data['layer_'+str(layer)]['height']
+	for layer in image_data['layers']['layer']:
+		width = int(layer['@width'])
+		height = int(layer['@height'])
 		new_image = Image.new('RGB', (width, height))
 		start_x = 0
 		start_y = 0
 		cur_width = 0
 		cur_height = 0
-		img_num = image_data['layer_'+str(layer)]['start']
-		for i in range(1, image_data['layer_'+str(layer)]['rows']+1):
-			for j in range(1, image_data['layer_'+str(layer)]['cols']+1):
+		img_num = int(layer['@starttile'])
+		for i in range(1, int(layer['@rows'])+1):
+			for j in range(1, int(layer['@cols'])+1):
 				paste_image = Image.open(os.path.join(WORK_DIR, str(img_num)+".jpg"))
 				new_image.paste(paste_image, (start_x, start_y))
 				img_num+=1
@@ -84,7 +72,7 @@ def combine_images(image_data):
 
 
 		new_image.save(os.path.join(WORK_DIR, WORK_DIR+"_{0}x{1}.jpg".format(width, height)))
-		print("Save {0} layer of {1} with size {2}x{3}".format(layer, layers-1, width, height))
+		print("Save {0} layer of {1} with size {2}x{3}".format(layer['@no'], len (image_data['layers']['layer']), width, height))
 
 def main(argv):
 	global WORK_DIR
