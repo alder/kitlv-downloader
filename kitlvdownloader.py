@@ -3,6 +3,7 @@
 
 import sys, argparse, requests, os, xmltodict, shutil
 from pyquery import PyQuery
+from PIL import Image
 
 BASE_DATA_URL = "http://media-kitlv.nl/index.php?option=com_memorixbeeld&view=record&format=topviewxml&tstart=0&id="
 WORK_DIR = ""
@@ -39,11 +40,11 @@ def parse_image_data(xml):
 	for i in range(1, image_data["layers"] + 1):
 		layer = "layer_" + str(i)
 		image_data[layer] = dict()
-		image_data[layer]["start"] = parsed_data["viewer"]["topviews"]["topview"]["tjpinfo"]["layers"]["layer"][i-1]["@starttile"]
-		image_data[layer]["cols"] = parsed_data["viewer"]["topviews"]["topview"]["tjpinfo"]["layers"]["layer"][i-1]["@cols"]
-		image_data[layer]["rows"] = parsed_data["viewer"]["topviews"]["topview"]["tjpinfo"]["layers"]["layer"][i-1]["@rows"]
-		image_data[layer]["width"] = parsed_data["viewer"]["topviews"]["topview"]["tjpinfo"]["layers"]["layer"][i-1]["@width"]
-		image_data[layer]["height"] = parsed_data["viewer"]["topviews"]["topview"]["tjpinfo"]["layers"]["layer"][i-1]["@height"]
+		image_data[layer]["start"] = int(parsed_data["viewer"]["topviews"]["topview"]["tjpinfo"]["layers"]["layer"][i-1]["@starttile"])
+		image_data[layer]["cols"] = int(parsed_data["viewer"]["topviews"]["topview"]["tjpinfo"]["layers"]["layer"][i-1]["@cols"])
+		image_data[layer]["rows"] = int(parsed_data["viewer"]["topviews"]["topview"]["tjpinfo"]["layers"]["layer"][i-1]["@rows"])
+		image_data[layer]["width"] = int(parsed_data["viewer"]["topviews"]["topview"]["tjpinfo"]["layers"]["layer"][i-1]["@width"])
+		image_data[layer]["height"] = int(parsed_data["viewer"]["topviews"]["topview"]["tjpinfo"]["layers"]["layer"][i-1]["@height"])
 
 	return image_data
 
@@ -57,6 +58,33 @@ def download_image_pieces(image_data):
 		with open(os.path.join(WORK_DIR, str(i)+".jpg"), 'wb') as f:
 			r.raw.decode_content = True
 			shutil.copyfileobj(r.raw, f)
+
+def combine_images(image_data):
+	global WORK_DIR
+
+	layers = image_data['layers']+1
+	for layer in range(1, layers):
+		width = image_data['layer_'+str(layer)]['width']
+		height = image_data['layer_'+str(layer)]['height']
+		new_image = Image.new('RGB', (width, height))
+		start_x = 0
+		start_y = 0
+		cur_width = 0
+		cur_height = 0
+		img_num = image_data['layer_'+str(layer)]['start']
+		for i in range(1, image_data['layer_'+str(layer)]['rows']+1):
+			for j in range(1, image_data['layer_'+str(layer)]['cols']+1):
+				paste_image = Image.open(os.path.join(WORK_DIR, str(img_num)+".jpg"))
+				new_image.paste(paste_image, (start_x, start_y))
+				img_num+=1
+				cur_width, cur_height = paste_image.size
+				start_x += cur_width
+			start_y += cur_height
+			start_x = 0
+
+
+		new_image.save(os.path.join(WORK_DIR, WORK_DIR+"_{0}x{1}.jpg".format(width, height)))
+		print("Save {0} layer of {1} with size {2}x{3}".format(layer, layers-1, width, height))
 
 def main(argv):
 	global WORK_DIR
@@ -74,6 +102,7 @@ def main(argv):
 	xml = get_image_datafile(datafile_id)
 	image_data = parse_image_data(xml)
 	download_image_pieces(image_data)
+	combine_images(image_data)
 
 if __name__ == '__main__':
 	main(sys.argv[1:])
